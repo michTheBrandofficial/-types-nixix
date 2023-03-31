@@ -27,7 +27,7 @@ declare namespace Nixix {
    * @param element nix.element to render 
    * @param root element which element will be appended to
    */
-		function render(element: HTMLElement, root: HTMLElement): void;
+		function render(element: JSX.Element, root: HTMLElement): void;
 
 		// hooks
 		type SetSignalDispatcher<S> = (arg: S) => void;
@@ -50,11 +50,13 @@ declare namespace Nixix {
    	*/
 		const Fragment: 'fragment';
 
+    type NixixNode<A> = (JSX.Element | string | SignalObject<A> | number | boolean)[] | JSX.Element | string | SignalObject<A> | number | boolean;
+
 		// real properties and interfaces
 		interface CSSProperties extends CSS.Properties<string, number> {}
 
     interface DOMAttributes<T> {
-        children?: any;
+        children?: NixixNode<any>;
 
         // clipboard events
         'on:copy'?: NativeEvents.ClipboardEventHandler<T>;
@@ -1270,11 +1272,25 @@ declare namespace Nixix {
 		}
 
 
+    // experimental
+    type JSXElementConstructor<P> =
+        | ((props: P) => NixixElement<any, any> | null);
+
+    interface NixixElement<P = any, T extends string | JSXElementConstructor<any> = string | JSXElementConstructor<any>> {
+      type: T;
+      props: P;
+      key: null;
+  }
 }
 
 declare global {
     namespace JSX {
-        interface Element  { }
+        interface Element extends Nixix.NixixElement<any, any> {
+        }
+
+        interface IntrinsicAttributes {
+          children?: Nixix.NixixNode<any>;
+        }
 
         interface IntrinsicElements {
             // HTML
