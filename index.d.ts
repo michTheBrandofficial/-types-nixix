@@ -1,5 +1,4 @@
 // Type definitions for NixixJS based on Nixix 18.0.27 typings
-// Project: http://facebook.github.io/Nixix/
 // Definitions by: michTheBrandofficial <https://github.com/michTheBrandofficial>
 
 /// <reference path="global.d.ts" />
@@ -29,30 +28,61 @@ declare namespace Nixix {
    */
 		function render(element: JSX.Element, root: HTMLElement): void;
 
-		// hooks
-		type SetSignalDispatcher<S> = (arg: S) => void;
-		interface SignalObject<S> {}
+		// primitives
+		type SetSignalDispatcher<S> = (newValue: S | (() => S)) => void;
+    type SetStoreDispatcher<S> = (newValue: S | (() => S)) => void;
+		interface SignalObject<S> {
+      value: S;
+    }
 
-		interface MutableRefObject {
-			current: Element;
+    interface StoreObject<O> {
+      readonly '$$__value'?: O;
+      [index: string]: any;
+    }
+
+		interface MutableRefObject<T> {
+			current: T;
 			refId?: number;
 			nextElementSibling: Element;
 			prevElementSibling: Element;
 			parent: HTMLElement;
 		}
-	
-		function callSignal<S>(initialValue: S): [SignalObject<S>, SetSignalDispatcher<S>];
-	
-		function callRef<R extends null | undefined >(ref: R): MutableRefObject;
+
+    class Signal {
+      'value': any;
+      '$$__id': number;
+    }
+
+    class Store {
+      '$$__name': string;
+      '$$__id': string | number;
+      '$$__value': any;
+    }
+    
+		function callSignal<S, C extends Signal>(initialValue: S, config?: C): [SignalObject<S>, SetSignalDispatcher<S>];
+		function callSignal<S, C extends Signal>(initialValue: S, config?: C): [S, SetSignalDispatcher<S>];
+    
+    function callStore<O>(initialValue: O): [O & StoreObject<O>, SetStoreDispatcher<O>]
+
+    function effect(callbackFn: CallableFunction, reactionProvider?: 'store', id?: number): Promise<void>;
+
+		function callRef<R extends Element | null = any | HTMLElementTagNameMap[keyof HTMLElementTagNameMap]>(ref?: R): MutableRefObject<R | null>;
 
 		/**
    	* @deprecated fragment - esbuild provides support for 'fragment' string
    	*/
 		const Fragment: 'fragment';
 
-    type NixixNode<A> = (JSX.Element | string | SignalObject<A> | number | boolean)[] | JSX.Element | string | SignalObject<A> | number | boolean;
+    type NixixNode<A> = (JSX.Element | Promise<JSX.Element> | string | SignalObject<A> | number | boolean)[] | JSX.Element | Promise<JSX.Element> | string | SignalObject<A> | number | boolean;
 
-		// real properties and interfaces
+    type ExoticComponent<P> = (props: P) => JSX.Element; 
+
+    // ExoticComponents 
+    const Img: ExoticComponent<ImgHTMLAttributes<HTMLImageElement>>;
+    const Suspense: ExoticComponent<{fallback: Nixix.NixixNode<any>, onError?: Nixix.NixixNode<any>} & JSX.IntrinsicAttributes>;
+    type AsyncComponent = (FC: () => Promise<JSX.Element>) => () => JSX.Element;
+    const asyncComponent: AsyncComponent;
+
 		interface CSSProperties extends CSS.Properties<string, number> {}
 
     interface DOMAttributes<T> {
@@ -253,8 +283,8 @@ declare namespace Nixix {
         'on:transitionendcapture'?: NativeEvents.TransitionEventHandler<T>;
     }
 
-		interface NixixAttributes<T> {
-			'bind:ref'?: MutableRefObject;
+		interface NixixAttributes<T extends Element | null = any | HTMLElementTagNameMap[keyof HTMLElementTagNameMap]> {
+			'bind:ref'?: MutableRefObject<T>;
 		}
 
     interface AriaAttributes {
@@ -444,7 +474,7 @@ declare namespace Nixix {
         'aria:valuetext'?: string;
     }
 
-    interface HTMLAttributes<T> extends  DOMAttributes<T>, AriaAttributes, NixixAttributes<T> {
+    interface HTMLAttributes<T> extends  DOMAttributes<T>, AriaAttributes, NixixAttributes<any> {
     // Standard HTML Attributes
         accesskey?: string ;
         autofocus?: boolean;
@@ -487,7 +517,7 @@ declare namespace Nixix {
         autocapitalize?: string;
         autocorrect?: string;
         autosave?: string;
-        color?: string;
+        color?: CSSProperties['color'];
         itemprop?: string;
         itemscope?: boolean;
         itemtype?: string;
@@ -739,7 +769,7 @@ declare namespace Nixix {
 			type?: HTMLInputTypeAttribute;
 			value?: any;
 			width?: number | string;
-			'on:change': NativeEvents.ChangeEventHandler<T>;
+			'on:change'?: NativeEvents.ChangeEventHandler<T>;
 		}
 	
 		interface KeygenHTMLAttributes<T> extends HTMLAttributes<T> {
@@ -983,11 +1013,11 @@ declare namespace Nixix {
     disableremoteplayback?: boolean;
   }
 
-	interface SVGAttributes<T> extends AriaAttributes, DOMAttributes<T> {
+	interface SVGAttributes<T> extends AriaAttributes, DOMAttributes<T>, NixixAttributes<any> {
 		// Attributes which also defined in HTMLAttributes
 		className?: string | undefined | null;
 		class?: string | undefined | null;
-		color?: string | undefined | null;
+		color?: CSSProperties['color'];
 		height?: number | string | undefined | null;
 		id?: string | undefined | null;
 		lang?: string | undefined | null;
@@ -996,7 +1026,7 @@ declare namespace Nixix {
 		method?: string | undefined | null;
 		min?: number | string | undefined | null;
 		name?: string | undefined | null;
-		style?: string | undefined | null;
+		style?: HtmlHTMLAttributes<SVGSVGElement>['style'];
 		target?: string | undefined | null;
 		type?: string | undefined | null;
 		width?: number | string | undefined | null;
@@ -1035,10 +1065,10 @@ declare namespace Nixix {
 		'clip-path'?: string | undefined | null;
 		clipPathUnits?: number | string | undefined | null;
 		'clip-rule'?: number | string | undefined | null;
-		'color-interpolation'?: number | string | undefined | null;
+		'color-interpolation'?: CSSProperties['colorInterpolation'];
 		'color-interpolation-filters'?: 'auto' | 'sRGB' | 'linearRGB' | 'inherit' | undefined | null;
 		'color-profile'?: number | string | undefined | null;
-		'color-rendering'?: number | string | undefined | null;
+		'color-rendering'?: CSSProperties['colorRendering'];
 		contentScriptType?: number | string | undefined | null;
 		contentStyleType?: number | string | undefined | null;
 		cursor?: number | string | undefined | null;
@@ -1061,16 +1091,16 @@ declare namespace Nixix {
 		end?: number | string | undefined | null;
 		exponent?: number | string | undefined | null;
 		externalResourcesRequired?: number | string | undefined | null;
-		fill?: string | undefined | null;
-		'fill-opacity'?: number | string | undefined | null;
+		fill?: CSSProperties['fill'];
+		'fill-opacity'?: CSSProperties['fillOpacity'];
 		'fill-rule'?: 'nonzero' | 'evenodd' | 'inherit' | undefined | null;
 		filter?: string | undefined | null;
 		filterRes?: number | string | undefined | null;
 		filterUnits?: number | string | undefined | null;
-		'flood-color'?: number | string | undefined | null;
+		'flood-color'?: CSSProperties['floodColor'];
 		'flood-opacity'?: number | string | undefined | null;
 		focusable?: number | string | undefined | null;
-		'font-family'?: string | undefined | null;
+		'font-family'?: CSSProperties['fontFamily'];
 		'font-size'?: number | string | undefined | null;
 		'font-size-adjust'?: number | string | undefined | null;
 		'font-stretch'?: number | string | undefined | null;
@@ -1111,7 +1141,7 @@ declare namespace Nixix {
 		keyTimes?: number | string | undefined | null;
 		lengthAdjust?: number | string | undefined | null;
 		'letter-spacing'?: number | string | undefined | null;
-		'lighting-color'?: number | string | undefined | null;
+		'lighting-color'?: CSSProperties['lightingColor'];
 		limitingConeAngle?: number | string | undefined | null;
 		local?: number | string | undefined | null;
 		'marker-end'?: string | undefined | null;
@@ -1179,19 +1209,19 @@ declare namespace Nixix {
 		stemh?: number | string | undefined | null;
 		stemv?: number | string | undefined | null;
 		stitchTiles?: number | string | undefined | null;
-		'stop-color'?: string | undefined | null;
+		'stop-color'?: CSSProperties['stopColor'];
 		'stop-opacity'?: number | string | undefined | null;
 		'strikethrough-position'?: number | string | undefined | null;
 		'strikethrough-thickness'?: number | string | undefined | null;
 		string?: number | string | undefined | null;
 		stroke?: string | undefined | null;
-		'stroke-dasharray'?: string | number | undefined | null;
-		'stroke-dashoffset'?: string | number | undefined | null;
-		'stroke-linecap'?: 'butt' | 'round' | 'square' | 'inherit' | undefined | null;
-		'stroke-linejoin'?: 'miter' | 'round' | 'bevel' | 'inherit' | undefined | null;
-		'stroke-miterlimit'?: string | undefined | null;
-		'stroke-opacity'?: number | string | undefined | null;
-		'stroke-width'?: number | string | undefined | null;
+		'stroke:dasharray'?: string | number | undefined | null;
+		'stroke:dashoffset'?: string | number | undefined | null;
+		'stroke:linecap'?: 'butt' | 'round' | 'square' | 'inherit' | undefined | null;
+		'stroke:linejoin'?: 'miter' | 'round' | 'bevel' | 'inherit' | undefined | null;
+		'stroke:miterlimit'?: string | undefined | null;
+		'stroke:opacity'?: number | string | undefined | null;
+		'stroke:width'?: number | string | undefined | null;
 		surfaceScale?: number | string | undefined | null;
 		systemLanguage?: number | string | undefined | null;
 		tableValues?: number | string | undefined | null;
@@ -1271,8 +1301,6 @@ declare namespace Nixix {
 			webpreferences?: string;
 		}
 
-
-    // experimental
     type JSXElementConstructor<P> =
         | ((props: P) => NixixElement<any, any> | null);
 
@@ -1287,6 +1315,8 @@ declare global {
     namespace JSX {
         interface Element extends Nixix.NixixElement<any, any> {
         }
+
+        interface Promise<T extends string> extends Nixix.NixixElement<any, T> {}
 
         interface IntrinsicAttributes {
           children?: Nixix.NixixNode<any>;
